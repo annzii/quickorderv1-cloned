@@ -1,0 +1,45 @@
+{
+  "name": "AddonGroup",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Group Name"
+    },
+    "name_th": {
+      "type": "string",
+      "title": "Group Name (Thai)"
+    },
+    "items": {
+      "type": "array",
+      "title": "Add-on Items",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "name_th": {
+            "type": "string",
+            "title": "Name (Thai)"
+          },
+          "price": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "price"
+        ]
+      }
+    },
+    "order": {
+      "type": "number",
+      "title": "Display Order",
+      "default": 0
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

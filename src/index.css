@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 38 44% 95%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 358 69% 38%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 38 20% 90%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 34 10% 87%;
+    --input: 34 10% 87%;
+    --ring: 358 69% 38%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+    --font-heading: var(--en-heading-font, 'Instrument Serif', ui-serif, Georgia, serif);
+    --font-body: var(--en-body-font, 'Work Sans', ui-sans-serif, system-ui, sans-serif);
+    --font-display: var(--en-display-font, 'Instrument Serif', ui-serif, Georgia, serif);
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --en-text-3xl: 1.875rem;
+    --en-text-2xl: 1.5rem;
+    --en-text-xl: 1.25rem;
+    --en-text-lg: 1.125rem;
+    --en-text-base: 1rem;
+    --en-text-sm: 0.875rem;
+    --en-text-xs: 0.75rem;
+    --en-letter-spacing: normal;
+    --en-line-height: 1.5;
+    --en-h1-weight: 400;
+    --en-h2-weight: 400;
+    --en-h3-weight: 400;
+    --en-body-weight: 400;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 358 69% 38%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+
+
+@layer base {
+  html {
+    font-size: 17px;
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+    letter-spacing: var(--en-letter-spacing);
+    line-height: var(--en-line-height);
+    font-weight: var(--en-body-weight);
+  }
+  .text-3xl { font-weight: var(--en-h1-weight); }
+  .text-2xl { font-weight: var(--en-h2-weight); }
+  .text-xl { font-weight: var(--en-h3-weight); }
+  html[lang="th"] body { font-weight: var(--th-body-weight); letter-spacing: var(--th-letter-spacing); }
+  html[lang="th"] .text-3xl { font-weight: var(--th-h1-weight); }
+  html[lang="th"] .text-2xl { font-weight: var(--th-h2-weight); }
+  html[lang="th"] .text-xl { font-weight: var(--th-h3-weight); }
+}
+
+/* English font-size overrides (driven by CSS variables for Typography Manager) */
+.text-3xl { font-size: var(--en-text-3xl); }
+.text-2xl { font-size: var(--en-text-2xl); }
+.text-xl { font-size: var(--en-text-xl); }
+.text-lg { font-size: var(--en-text-lg); }
+.text-base { font-size: var(--en-text-base); }
+.text-sm { font-size: var(--en-text-sm); }
+.text-xs { font-size: var(--en-text-xs); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ============================================================
+   LANGUAGE SWITCHER — always uses English body font, never switches
+   ============================================================ */
+.lang-switcher {
+  font-family: var(--en-body-font, 'Work Sans', sans-serif) !important;
+}
+
+/* ============================================================
+   SHOP DESCRIPTION — micro-typography for the tagline under the logo
+   Adjust font-size, letter-spacing, line-height, or weight here.
+   Font family comes from Typography Management (font-body).
+   ============================================================ */
+.shop-description {
+  font-family: var(--font-body);
+  font-size: var(--en-shop-desc-size, 10px);
+  letter-spacing: var(--en-shop-desc-letter-spacing, 1.792px);
+  line-height: var(--en-shop-desc-line-height, 1.1);
+  text-transform: uppercase;
+  font-weight: var(--en-shop-desc-weight, 400);
+}
+
+/* ============================================================
+   CATEGORY FILTER — pill buttons in the sticky category bar
+   Adjust font-size, letter-spacing, or weight here.
+   Font family comes from Typography Management (font-body).
+   ============================================================ */
+.category-filter {
+  font-family: var(--font-body);
+  font-size: var(--en-cat-filter-size, 11.2px);
+  letter-spacing: var(--en-cat-filter-letter-spacing, 1.792px);
+  text-transform: uppercase;
+  font-weight: var(--en-cat-filter-weight, 400);
+}
+
+/* Thai overrides for shop description & category filter */
+html[lang="th"] .shop-description {
+  font-size: var(--th-shop-desc-size, 10px);
+  letter-spacing: var(--th-shop-desc-letter-spacing, normal);
+  line-height: var(--th-shop-desc-line-height, 1.1);
+  font-weight: var(--th-shop-desc-weight, 400);
+}
+html[lang="th"] .category-filter {
+  font-size: var(--th-cat-filter-size, 11.2px);
+  letter-spacing: var(--th-cat-filter-letter-spacing, normal);
+  font-weight: var(--th-cat-filter-weight, 400);
+}
+
+/* ============================================================
+   THAI TYPOGRAPHY — fully independent from English
+   Tweak these variables to adjust Thai-only rendering.
+   English (default :root above) is never affected.
+   ============================================================ */
+html[lang="th"] {
+  --font-heading: var(--th-heading-font);
+  --font-body: var(--th-body-font);
+  --font-display: var(--th-heading-font);
+  --th-letter-spacing: normal;
+  --th-line-height: 1.6;
+  --th-h1-weight: 400;
+  --th-h2-weight: 400;
+  --th-h3-weight: 400;
+  --th-body-weight: 400;
+
+  /* Thai font-size scale (matches English defaults — edit freely) */
+  --th-text-3xl: 1.875rem;   /* 30px */
+  --th-text-2xl: 1.5rem;     /* 24px */
+  --th-text-xl: 1.25rem;     /* 20px */
+  --th-text-lg: 1.125rem;    /* 18px */
+  --th-text-base: 1rem;      /* 16px */
+  --th-text-sm: 0.875rem;    /* 14px */
+  --th-text-xs: 0.75rem;     /* 12px */
+  --th-text-11: 0.6875rem;   /* 11px */
+  --th-text-10: 0.625rem;    /* 10px */
+}
+
+/* Thai-only font sizes — override Tailwind utilities in Thai mode only */
+html[lang="th"] .text-3xl { font-size: var(--th-text-3xl); }
+html[lang="th"] .text-2xl { font-size: var(--th-text-2xl); }
+html[lang="th"] .text-xl { font-size: var(--th-text-xl); }
+html[lang="th"] .text-lg { font-size: var(--th-text-lg); }
+html[lang="th"] .text-base { font-size: var(--th-text-base); }
+html[lang="th"] .text-sm { font-size: var(--th-text-sm); }
+html[lang="th"] .text-xs { font-size: var(--th-text-xs); }
+html[lang="th"] .text-\[11px\] { font-size: var(--th-text-11); }
+html[lang="th"] .text-\[10px\] { font-size: var(--th-text-10); }

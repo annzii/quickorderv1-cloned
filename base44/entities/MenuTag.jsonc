@@ -1,0 +1,32 @@
+{
+  "name": "MenuTag",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "name_th": {
+      "type": "string",
+      "title": "Name (Thai)"
+    },
+    "icon_url": {
+      "type": "string",
+      "title": "Icon Image URL (png/svg)",
+      "format": "uri"
+    },
+    "order": {
+      "type": "number",
+      "title": "Display Order",
+      "default": 0
+    },
+    "is_filterable": {
+      "type": "boolean",
+      "title": "Show as collection filter pill in storefront",
+      "default": false
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
