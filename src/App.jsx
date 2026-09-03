@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { testSupabase } from './lib/testSupabase';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -59,6 +61,10 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+
+  useEffect(() => {
+    testSupabase();
+  }, []);
 
   return (
     <AuthProvider>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/BottomNav';
 import { useAuth } from '@/lib/AuthContext';
 import { Plus, Pencil, Trash2, X, Save, Check, UtensilsCrossed, Layers, Tag, Tags, Type, ChevronRight, ArrowLeft, MessageSquare, Upload, GripVertical, Download } from 'lucide-react';
@@ -78,13 +78,22 @@ export default function Admin() {
   const load = async () => {
     setLoading(true);
     try {
-      const [menu, s, ag, cats, tags] = await Promise.all([
-        base44.entities.MenuItem.list(),
-        base44.entities.StoreSettings.list(),
-        base44.entities.AddonGroup.list(),
-        base44.entities.Category.list(),
-        base44.entities.MenuTag.list(),
+      const [
+        { data: menu, error: menuError },
+        { data: s, error: settingsError },
+        { data: ag, error: groupsError },
+        { data: cats, error: categoriesError },
+        { data: tags, error: tagsError },
+      ] = await Promise.all([
+        supabase.from('menu_items').select('*'),
+        supabase.from('store_settings').select('*'),
+        supabase.from('addon_groups').select('*'),
+        supabase.from('categories').select('*'),
+        supabase.from('menu_tags').select('*'),
       ]);
+
+      const firstError = menuError || settingsError || groupsError || categoriesError || tagsError;
+      if (firstError) throw firstError;
       setItems(menu);
       setSettings(s[0] || null);
       setGroups((ag || []).sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
@@ -93,10 +102,26 @@ export default function Admin() {
       if (catList.length === 0 && menu.length > 0) {
         const uniqueCats = Array.from(new Set(menu.map((i) => i.category).filter(Boolean)));
         if (uniqueCats.length > 0) {
-          await base44.entities.Category.bulkCreate(
-            uniqueCats.map((name, i) => ({ name, name_th: menu.find((it) => it.category === name)?.category_th || '', order: i }))
+          await supabase
+            .from('categories')
+            .insert(
+              uniqueCats.map((name, i) => ({
+                name,
+                name_th: menu.find((it) => it.category === name)?.category_th || '',
+                order: i,
+              }))
+            );
+
+          const { data: refreshedCats, error: refreshedCatsError } = await supabase
+            .from('categories')
+            .select('*')
+            .order('order', { ascending: true });
+
+          if (refreshedCatsError) throw refreshedCatsError;
+
+          catList = (refreshedCats || []).sort(
+            (a, b) => (a.order ?? 999) - (b.order ?? 999)
           );
-          catList = (await base44.entities.Category.list()).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
         }
       }
       setCategories(catList);
@@ -135,7 +160,11 @@ export default function Admin() {
   const deleteSelected = async () => {
     if (selectedIds.length === 0) return;
     if (!confirm(`Delete ${selectedIds.length} selected item${selectedIds.length > 1 ? 's' : ''}?`)) return;
-    await Promise.all(selectedIds.map((id) => base44.entities.MenuItem.delete(id)));
+    await Promise.all(
+      selectedIds.map((id) =>
+        supabase.from('menu_items').delete().eq('id', id)
+      )
+    );
     setSelectedIds([]);
     load();
   };
@@ -174,9 +203,18 @@ export default function Admin() {
       menu_tag_ids: draft.menu_tag_ids || [],
     };
     if (editing === 'new') {
-      await base44.entities.MenuItem.create(payload);
+      const { error } = await supabase
+        .from('menu_items')
+        .insert([payload]);
+
+      if (error) throw error;
     } else {
-      await base44.entities.MenuItem.update(editing, payload);
+      const { error } = await supabase
+        .from('menu_items')
+        .update(payload)
+        .eq('id', editing);
+
+      if (error) throw error;
     }
     setEditing(null);
     load();
@@ -184,7 +222,12 @@ export default function Admin() {
 
   const deleteItem = async (id) => {
     if (!confirm('Delete this menu item?')) return;
-    await base44.entities.MenuItem.delete(id);
+    const { error } = await supabase
+      .from('menu_items')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
     load();
   };
 
@@ -223,9 +266,22 @@ export default function Admin() {
     try {
       const ids = itemOrder.map((it) => it.id);
       if (settings?.id) {
-        await base44.entities.StoreSettings.update(settings.id, { menu_item_order: ids });
+        const { error } = await supabase
+          .from('store_settings')
+          .update({ menu_item_order: ids })
+          .eq('id', settings.id);
+
+        if (error) throw error;
       } else {
-        await base44.entities.StoreSettings.create({ store_name: '', whatsapp_number: '', menu_item_order: ids });
+        const { error } = await supabase
+          .from('store_settings')
+          .insert([{
+            store_name: '',
+            whatsapp_number: '',
+            menu_item_order: ids,
+          }]);
+
+        if (error) throw error;
       }
       load();
     } finally {
@@ -244,9 +300,17 @@ export default function Admin() {
   const saveGroupOrder = async () => {
     setSavingGroupOrder(true);
     try {
-      await base44.entities.AddonGroup.bulkUpdate(
-        groupOrder.map((g, i) => ({ id: g.id, order: i }))
+      const results = await Promise.all(
+        groupOrder.map((g, i) =>
+          supabase
+            .from('addon_groups')
+            .update({ order: i })
+            .eq('id', g.id)
+        )
       );
+
+      const error = results.find((result) => result.error)?.error;
+      if (error) throw error;
       load();
     } finally {
       setSavingGroupOrder(false);
@@ -266,16 +330,30 @@ export default function Admin() {
       items: (groupDraft.items || []).map((it) => ({ name: it.name, name_th: it.name_th, price: Number(it.price) || 0 })),
     };
     if (groupEditing === 'new') {
-      await base44.entities.AddonGroup.create(payload);
+      const { error } = await supabase
+        .from('addon_groups')
+        .insert([payload]);
+
+      if (error) throw error;
     } else {
-      await base44.entities.AddonGroup.update(groupEditing, payload);
+      const { error } = await supabase
+        .from('addon_groups')
+        .update(payload)
+        .eq('id', groupEditing);
+
+      if (error) throw error;
     }
     setGroupEditing(null);
     load();
   };
   const deleteGroup = async (id) => {
     if (!confirm('Delete this add-on group?')) return;
-    await base44.entities.AddonGroup.delete(id);
+    const { error } = await supabase
+      .from('addon_groups')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
     load();
   };
   const agAddItem = () => setGroupDraft({ ...groupDraft, items: [...(groupDraft.items || []), { name: '', name_th: '', price: '' }] });
@@ -297,9 +375,18 @@ export default function Admin() {
 
   const saveSettings = async () => {
     if (settings?.id) {
-      await base44.entities.StoreSettings.update(settings.id, settingsDraft);
+      const { error } = await supabase
+        .from('store_settings')
+        .update(settingsDraft)
+        .eq('id', settings.id);
+
+      if (error) throw error;
     } else {
-      await base44.entities.StoreSettings.create(settingsDraft);
+      const { error } = await supabase
+        .from('store_settings')
+        .insert([settingsDraft]);
+
+      if (error) throw error;
     }
     setSettingsOpen(false);
     load();

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabase';
 import { useCart } from '@/lib/cartContext';
 import { useLanguage } from '@/lib/languageContext';
 import BottomNav from '@/components/BottomNav';
@@ -53,9 +53,33 @@ export default function Cart() {
   const [phoneTouched, setPhoneTouched] = useState(false);
 
   useEffect(() => {
-    base44.entities.StoreSettings.list().then((s) => setSettings(s[0] || null));
-    base44.entities.MenuTag.list().then((t) => setMenuTags(t || []));
-  }, []);
+  const loadCartData = async () => {
+    // Load store settings
+    const { data: settingsData, error: settingsError } = await supabase
+      .from('store_settings')
+      .select('*')
+      .limit(1);
+
+    if (settingsError) {
+      console.error('Failed to load store settings:', settingsError);
+    } else {
+      setSettings(settingsData?.[0] || null);
+    }
+
+    // Load menu tags
+    const { data: tagsData, error: tagsError } = await supabase
+      .from('menu_tags')
+      .select('*');
+
+    if (tagsError) {
+      console.error('Failed to load menu tags:', tagsError);
+    } else {
+      setMenuTags(tagsData || []);
+    }
+  };
+
+  loadCartData();
+}, []);
 
   // Auto-populate pick-up time to now + 1h when "Select Time" is chosen.
   useEffect(() => {

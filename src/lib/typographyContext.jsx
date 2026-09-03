@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabase';
 
 const TypographyContext = createContext(null);
 
@@ -110,9 +110,19 @@ export function TypographyProvider({ children }) {
   const [settings, setSettings] = useState(null);
 
   const refresh = useCallback(async () => {
-    const s = await base44.entities.StoreSettings.list();
-    setSettings(s[0] || null);
-  }, []);
+  const { data, error } = await supabase
+    .from('store_settings')
+    .select('*')
+    .limit(1);
+
+  if (error) {
+    console.error('Failed to load typography settings:', error);
+    setSettings(null);
+    return;
+  }
+
+  setSettings(data?.[0] || null);
+}, []);
 
   useEffect(() => { refresh(); }, [refresh]);
 

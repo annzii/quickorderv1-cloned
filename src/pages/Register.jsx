@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
@@ -23,14 +27,29 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
+
     setLoading(true);
+
     try {
-      await base44.auth.register({ email, password });
-      setShowOtp(true);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Supabase requires email confirmation when enabled.
+      // Show the OTP screen when confirmation is required.
+      if (data?.user && !data?.session) {
+        setShowOtp(true);
+      } else {
+        window.location.href = safeReturnTo();
+      }
     } catch (err) {
       setError(err.message || "Registration failed");
     } finally {
@@ -41,11 +60,16 @@ export default function Register() {
   const handleVerify = async () => {
     setError("");
     setLoading(true);
+
     try {
-      const result = await base44.auth.verifyOtp({ email, otpCode });
-      if (result?.access_token) {
-        base44.auth.setToken(result.access_token);
-      }
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otpCode,
+        type: "signup",
+      });
+
+      if (error) throw error;
+
       window.location.href = safeReturnTo();
     } catch (err) {
       setError(err.message || "Invalid verification code");
@@ -56,8 +80,15 @@ export default function Register() {
 
   const handleResend = async () => {
     setError("");
+
     try {
-      await base44.auth.resendOtp(email);
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+      });
+
+      if (error) throw error;
+
       toast({
         title: "Code sent",
         description: "Check your email for the new code.",
@@ -67,8 +98,24 @@ export default function Register() {
     }
   };
 
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", safeReturnTo());
+  const handleGoogle = async () => {
+    setError("");
+
+    try {
+      const returnTo = safeReturnTo();
+      const redirectTo = `${window.location.origin}${returnTo}`;
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+        },
+      });
+
+      if (error) throw error;
+    } catch (err) {
+      setError(err.message || "Unable to continue with Google");
+    }
   };
 
   if (showOtp) {
@@ -83,6 +130,7 @@ export default function Register() {
             {error}
           </div>
         )}
+
         <div className="flex justify-center mb-6">
           <InputOTP
             maxLength={6}
@@ -101,6 +149,7 @@ export default function Register() {
             </InputOTPGroup>
           </InputOTP>
         </div>
+
         <Button
           className="w-full h-12 font-medium"
           onClick={handleVerify}
@@ -115,9 +164,13 @@ export default function Register() {
             "Verify"
           )}
         </Button>
+
         <p className="text-center text-sm text-muted-foreground mt-4">
           Didn't receive the code?{" "}
-          <button onClick={handleResend} className="text-primary font-medium hover:underline">
+          <button
+            onClick={handleResend}
+            className="text-primary font-medium hover:underline"
+          >
             Resend
           </button>
         </p>
@@ -134,7 +187,13 @@ export default function Register() {
         <>
           Already have an account?{" "}
           <Link
-            to={"/login" + (safeReturnTo() !== "/" ? "?returnTo=" + encodeURIComponent(safeReturnTo()) : "")}
+            to={
+              "/login" +
+              (safeReturnTo() !== "/"
+                ? "?returnTo=" +
+                  encodeURIComponent(safeReturnTo())
+                : "")
+            }
             className="text-primary font-medium hover:underline"
           >
             Log in
@@ -155,8 +214,11 @@ export default function Register() {
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border" />
         </div>
+
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-3 text-muted-foreground">or</span>
+          <span className="bg-card px-3 text-muted-foreground">
+            or
+          </span>
         </div>
       </div>
 
@@ -169,8 +231,13 @@ export default function Register() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
+
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Mail
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+
             <Input
               id="email"
               type="email"
@@ -184,10 +251,16 @@ export default function Register() {
             />
           </div>
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
+
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Lock
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+
             <Input
               id="password"
               type="password"
@@ -200,10 +273,16 @@ export default function Register() {
             />
           </div>
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="confirm">Confirm Password</Label>
+
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Lock
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+
             <Input
               id="confirm"
               type="password"
@@ -216,7 +295,12 @@ export default function Register() {
             />
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+
+        <Button
+          type="submit"
+          className="w-full h-12 font-medium"
+          disabled={loading}
+        >
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
