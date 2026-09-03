@@ -64,7 +64,7 @@ export default function PageNotFound() {
                         </p>
                     </div>
 
-                    {/* Admin Note */}
+                    {/* Manager Note */}
                     {isFetched &&
                         authData.isAuthenticated &&
                         authData.user?.role === 'admin' && (
@@ -76,7 +76,7 @@ export default function PageNotFound() {
 
                                     <div className="text-left space-y-1">
                                         <p className="text-sm font-medium text-slate-700">
-                                            Admin Note
+                                            Manager Note
                                         </p>
 
                                         <p className="text-sm text-slate-600 leading-relaxed">

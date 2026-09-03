@@ -14,23 +14,60 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
-  // We keep these names so the rest of your existing app continues working
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [appPublicSettings, setAppPublicSettings] = useState(null);
 
+  const loadUserWithProfile = async (authUser) => {
+    if (!authUser) {
+      setUser(null);
+      setIsAuthenticated(false);
+      return;
+    }
+
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to load user profile:', error);
+      }
+
+      const appUser = {
+        ...authUser,
+        role: profile?.role || null,
+      };
+
+      setUser(appUser);
+      setIsAuthenticated(true);
+
+      console.log('AUTH USER:', appUser);
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+
+      setUser({
+        ...authUser,
+        role: null,
+      });
+
+      setIsAuthenticated(true);
+    }
+  };
+
   useEffect(() => {
     checkUserAuth();
 
-    // Listen for Supabase login/logout changes
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const currentUser = session?.user || null;
 
-      setUser(currentUser);
-      setIsAuthenticated(!!currentUser);
+      await loadUserWithProfile(currentUser);
+
       setIsLoadingAuth(false);
       setAuthChecked(true);
     });
@@ -41,8 +78,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
-    // Base44 used this for app-level authentication.
-    // Our public QuickOrder menu does not need Base44 app authentication.
     setIsLoadingPublicSettings(false);
     setAuthError(null);
   };
@@ -62,8 +97,8 @@ export const AuthProvider = ({ children }) => {
 
       const currentUser = session?.user || null;
 
-      setUser(currentUser);
-      setIsAuthenticated(!!currentUser);
+      await loadUserWithProfile(currentUser);
+
       setAuthError(null);
     } catch (error) {
       console.error('User auth check failed:', error);
@@ -88,9 +123,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
-    // We will create the Supabase admin login flow later.
-    // For now, keep public customers on the website.
-    window.location.href = '/';
+    window.location.href = '/login';
   };
 
   return (

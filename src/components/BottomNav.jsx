@@ -14,7 +14,7 @@ export default function BottomNav() {
     { to: '/', label: 'Menu', icon: UtensilsCrossed },
     { to: '/cart', label: 'Cart', icon: ShoppingBag, badge: count },
   ];
-  if (isAdmin) tabs.push({ to: '/admin', label: 'Manage', icon: Settings });
+  if (isAdmin) tabs.push({ to: '/manager', label: 'Manage', icon: Settings });
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-background/90 backdrop-blur-lg border-t border-border">
