@@ -1,9 +1,0 @@
-{
-  "name": "QuickOrderV1-Cloned",
-  "site": {
-    "installCommand": "npm install",
-    "buildCommand": "npm run build",
-    "serveCommand": "npm run dev",
-    "outputDirectory": "./dist"
-  }
-}
