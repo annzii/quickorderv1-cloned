@@ -1,31 +1,34 @@
 import React, { useState } from "react";
+
 import { Link } from "react-router-dom";
+
 import { supabase } from "@/lib/supabase";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
+
 import { toast } from "@/components/ui/use-toast";
+
 import { safeReturnTo } from "@/lib/authReturnTo";
 
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showOtp, setShowOtp] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError("");
 
     if (password !== confirmPassword) {
@@ -36,19 +39,29 @@ export default function Register() {
     setLoading(true);
 
     try {
+      const returnTo = safeReturnTo();
+
+      const redirectTo = `${window.location.origin}${returnTo}`;
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: redirectTo,
+        },
       });
 
       if (error) throw error;
 
-      // Supabase requires email confirmation when enabled.
-      // Show the OTP screen when confirmation is required.
       if (data?.user && !data?.session) {
-        setShowOtp(true);
+        setShowConfirmation(true);
+
+        toast({
+          title: "Check your email",
+          description: "We sent you a confirmation link.",
+        });
       } else {
-        window.location.href = safeReturnTo();
+        window.location.href = returnTo;
       }
     } catch (err) {
       setError(err.message || "Registration failed");
@@ -57,44 +70,33 @@ export default function Register() {
     }
   };
 
-  const handleVerify = async () => {
+  const handleResend = async () => {
     setError("");
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otpCode,
-        type: "signup",
-      });
+      const returnTo = safeReturnTo();
 
-      if (error) throw error;
+      const redirectTo = `${window.location.origin}${returnTo}`;
 
-      window.location.href = safeReturnTo();
-    } catch (err) {
-      setError(err.message || "Invalid verification code");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    setError("");
-
-    try {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
+        options: {
+          emailRedirectTo: redirectTo,
+        },
       });
 
       if (error) throw error;
 
       toast({
-        title: "Code sent",
-        description: "Check your email for the new code.",
+        title: "Email sent",
+        description: "Check your inbox for the new confirmation link.",
       });
     } catch (err) {
-      setError(err.message || "Failed to resend code");
+      setError(err.message || "Failed to resend confirmation email");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,6 +105,7 @@ export default function Register() {
 
     try {
       const returnTo = safeReturnTo();
+
       const redirectTo = `${window.location.origin}${returnTo}`;
 
       const { error } = await supabase.auth.signInWithOAuth({
@@ -118,12 +121,12 @@ export default function Register() {
     }
   };
 
-  if (showOtp) {
+  if (showConfirmation) {
     return (
       <AuthLayout
         icon={Mail}
-        title="Verify your email"
-        subtitle={`We sent a code to ${email}`}
+        title="Check your email"
+        subtitle={`We sent a confirmation link to ${email}`}
       >
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
@@ -131,49 +134,44 @@ export default function Register() {
           </div>
         )}
 
-        <div className="flex justify-center mb-6">
-          <InputOTP
-            maxLength={6}
-            value={otpCode}
-            onChange={setOtpCode}
-            autoFocus
-            autoComplete="one-time-code"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground text-center">
+            Click the link in the email to confirm your account and finish
+            signing up.
+          </p>
 
-        <Button
-          className="w-full h-12 font-medium"
-          onClick={handleVerify}
-          disabled={loading || otpCode.length < 6}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Verifying...
-            </>
-          ) : (
-            "Verify"
-          )}
-        </Button>
-
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          Didn't receive the code?{" "}
-          <button
+          <Button
+            className="w-full h-12 font-medium"
             onClick={handleResend}
-            className="text-primary font-medium hover:underline"
+            disabled={loading}
+            variant="outline"
           >
-            Resend
-          </button>
-        </p>
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              "Resend confirmation email"
+            )}
+          </Button>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Already confirmed your email?{" "}
+            <Link
+              to={
+                "/login" +
+                (safeReturnTo() !== "/"
+                  ? "?returnTo=" +
+                    encodeURIComponent(safeReturnTo())
+                  : "")
+              }
+              className="text-primary font-medium hover:underline"
+            >
+              Log in
+            </Link>
+          </p>
+        </div>
       </AuthLayout>
     );
   }
