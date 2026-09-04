@@ -81,7 +81,7 @@ const emptyGroup = {
 };
 
 export default function Admin() {
-  const { user, isLoadingAuth } = useAuth();
+  const { user, isLoadingAuth, logout } = useAuth();
 
   const [tab, setTab] = useState(null);
   const [items, setItems] = useState([]);
@@ -3820,7 +3820,25 @@ export default function Admin() {
           </div>
         )}
 
-      <BottomNav />
+      <div className="fixed bottom-20 left-0 right-0 z-40 flex justify-center px-4">
+  <div className="bg-white border border-stone-200 shadow-lg rounded-2xl px-4 py-3 flex items-center gap-4 max-w-md w-full">
+    <div className="flex-1 min-w-0">
+      <div className="text-xs text-stone-400">Logged in as</div>
+      <div className="text-sm font-medium text-stone-800 truncate">
+        {user?.email || 'Admin'}
+      </div>
+    </div>
+
+    <button
+      onClick={() => logout()}
+      className="shrink-0 px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-semibold hover:bg-stone-700"
+    >
+      Log Out
+    </button>
+  </div>
+</div>
+
+<BottomNav />
     </div>
   );
 }
