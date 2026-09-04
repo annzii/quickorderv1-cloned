@@ -170,6 +170,7 @@ export default function Menu() {
           )
           .map((g) => ({
             category_name: g.name,
+            category_name_th: g.name_th,
             items: g.items || []
           }))
       : item.addon_options || [];
