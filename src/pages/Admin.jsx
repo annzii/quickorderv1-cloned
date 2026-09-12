@@ -77,6 +77,8 @@ const emptyItem = {
 const emptyGroup = {
   name: '',
   name_th: '',
+  min_selections: 0,
+  max_selections: 99,
   items: [],
 };
 
@@ -684,11 +686,15 @@ export default function Admin() {
   };
 
   const openGroupEdit = (g) => {
-    setGroupDraft({
-      name: g.name || '',
-      name_th:
-        g.name_th || '',
-      items:
+setGroupDraft({
+  name: g.name || '',
+  name_th:
+    g.name_th || '',
+  min_selections:
+    g.min_selections ?? 0,
+  max_selections:
+    g.max_selections ?? 99,
+  items:
         (g.items || []).map(
           (it) => ({
             name: it.name,
@@ -705,11 +711,15 @@ export default function Admin() {
   };
 
   const saveGroup = async () => {
-    const payload = {
-      name: groupDraft.name,
-      name_th:
-        groupDraft.name_th,
-      items:
+const payload = {
+  name: groupDraft.name,
+  name_th:
+    groupDraft.name_th,
+  min_selections:
+    Number(groupDraft.min_selections) || 0,
+  max_selections:
+    Number(groupDraft.max_selections) || 99,
+  items:
         (groupDraft.items || []).map(
           (it) => ({
             name: it.name,
@@ -2174,7 +2184,7 @@ export default function Admin() {
                 className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
               />
 
-              <input
+                            <input
                 placeholder="Group name (TH)"
                 value={
                   groupDraft.name_th
@@ -2188,6 +2198,50 @@ export default function Admin() {
                 }
                 className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
               />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-stone-500 mb-1">
+                    Minimum selections
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={
+                      groupDraft.min_selections
+                    }
+                    onChange={(e) =>
+                      setGroupDraft({
+                        ...groupDraft,
+                        min_selections:
+                          e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-500 mb-1">
+                    Maximum selections
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={
+                      groupDraft.max_selections
+                    }
+                    onChange={(e) =>
+                      setGroupDraft({
+                        ...groupDraft,
+                        max_selections:
+                          e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
 
               <div className="space-y-2">
                 {(

@@ -8,10 +8,25 @@ export default function ItemModal({ item, currency, lang, t, settings, tags, onC
   const [selected, setSelected] = useState([]);
   const [note, setNote] = useState('');
 
-  const toggleAddon = (addon) => {
+  const toggleAddon = (addon, group) => {
     setSelected((prev) => {
       const exists = prev.find((a) => a.name === addon.name);
-      if (exists) return prev.filter((a) => a.name !== addon.name);
+
+      if (exists) {
+        return prev.filter((a) => a.name !== addon.name);
+      }
+
+      const groupAddons = group.items || [];
+      const selectedInGroup = prev.filter((a) =>
+        groupAddons.some((g) => g.name === a.name)
+      );
+
+      const maxSelections = Number(group.max_selections ?? 99);
+
+      if (selectedInGroup.length >= maxSelections) {
+        return prev;
+      }
+
       return [...prev, addon];
     });
   };
@@ -20,10 +35,40 @@ export default function ItemModal({ item, currency, lang, t, settings, tags, onC
   const unitPrice = Number(item.price) + addonTotal;
   const total = unitPrice * qty;
 
-  const confirm = () => {
-    onConfirm({ ...item, qty, addons: selected, note: note.trim() });
-    onClose();
-  };
+const confirm = () => {
+  for (const group of item.addon_options || []) {
+    const groupAddons = group.items || [];
+
+    const selectedInGroup = selected.filter((a) =>
+      groupAddons.some((g) => g.name === a.name)
+    );
+
+    const minSelections = Number(group.min_selections ?? 0);
+
+    if (selectedInGroup.length < minSelections) {
+      const groupName =
+        t(group.category_name, group.category_name_th) ||
+        (lang === 'th' ? 'เพิ่มเติม' : 'Add-ons');
+
+      alert(
+        lang === 'th'
+          ? `กรุณาเลือก ${groupName} อย่างน้อย ${minSelections} รายการ`
+          : `Please select at least ${minSelections} item${minSelections > 1 ? 's' : ''} from ${groupName}`
+      );
+
+      return;
+    }
+  }
+
+  onConfirm({
+    ...item,
+    qty,
+    addons: selected,
+    note: note.trim(),
+  });
+
+  onClose();
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -55,16 +100,26 @@ export default function ItemModal({ item, currency, lang, t, settings, tags, onC
           <div className="mt-5 space-y-4">
               {item.addon_options.map((cat, ci) =>
             <div key={ci}>
-                  <h3 className="category-filter text-muted-foreground mb-2">
-                    {t(cat.category_name, cat.category_name_th) || (lang === 'th' ? 'เพิ่มเติม' : 'Add-ons')}
-                  </h3>
+<div className="mb-2">
+  <div className="category-filter text-muted-foreground">
+    {t(cat.category_name, cat.category_name_th) || (lang === 'th' ? 'เพิ่มเติม' : 'Add-ons')}
+  </div>
+
+ {Number(cat.max_selections ?? 99) < 99 && (
+  <div className="text-[11px] text-stone-400 mt-0.5">
+    {Number(cat.min_selections ?? 0) > 0
+      ? `${lang === 'th' ? 'เลือก' : 'Choose'} ${Number(cat.min_selections)}${Number(cat.max_selections ?? 99) !== Number(cat.min_selections) ? `–${Number(cat.max_selections ?? 99)}` : ''}`
+      : `${lang === 'th' ? 'เลือกได้สูงสุด' : 'Choose up to'} ${Number(cat.max_selections ?? 99)}`}
+  </div>
+)}
+</div>
                   <div className="space-y-2">
                     {cat.items?.map((addon, i) => {
                   const checked = selected.some((a) => a.name === addon.name);
                   return (
                     <button
                       key={i}
-                      onClick={() => toggleAddon(addon)}
+                      onClick={() => toggleAddon(addon, cat)}
                       className={`flex items-center justify-between w-full border transition-colors rounded-sm px-3 py-3 ${
                       checked ?
                       'border-primary bg-primary/5' :

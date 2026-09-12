@@ -168,11 +168,13 @@ export default function Menu() {
               (a.order ?? a.display_order ?? 999) -
               (b.order ?? b.display_order ?? 999)
           )
-          .map((g) => ({
-            category_name: g.name,
-            category_name_th: g.name_th,
-            items: g.items || []
-          }))
+         .map((g) => ({
+  category_name: g.name,
+  category_name_th: g.name_th,
+  min_selections: g.min_selections ?? 0,
+  max_selections: g.max_selections ?? 99,
+  items: g.items || []
+}))
       : item.addon_options || [];
 
   const handleConfirm = (item) => {
