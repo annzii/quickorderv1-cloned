@@ -7,6 +7,37 @@ export default function ItemModal({ item, currency, lang, t, settings, tags, onC
   const [qty, setQty] = useState(1);
   const [selected, setSelected] = useState([]);
   const [note, setNote] = useState('');
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState(null);
+const handleTouchStart = (e) => {
+  setTouchStartX(e.touches[0].clientX);
+};
+
+const handleTouchEnd = (e) => {
+  if (touchStartX === null || !item.image_url_2) {
+    setTouchStartX(null);
+    return;
+  }
+
+  const touchEndX = e.changedTouches[0].clientX;
+  const distance = touchStartX - touchEndX;
+
+  // Ignore very small movements
+  if (Math.abs(distance) < 50) {
+    setTouchStartX(null);
+    return;
+  }
+
+  if (distance > 0) {
+    // Swipe left → next image
+    setActiveImageIndex(1);
+  } else {
+    // Swipe right → previous image
+    setActiveImageIndex(0);
+  }
+
+  setTouchStartX(null);
+};
 
   const toggleAddon = (addon, group) => {
     setSelected((prev) => {
@@ -74,17 +105,79 @@ const confirm = () => {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-background w-full max-w-md sm:rounded-3xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom rounded-[4px_4px_0px_0px]">
-        <div className="relative w-full aspect-square bg-muted overflow-hidden">
-          {item.image_url &&
-          <Image src={item.image_url} fittingType="fill" className="w-full h-full" />
-          }
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow">
-            
-            <X className="w-4 h-4" />
-          </button>
+        <div
+  className="relative w-full aspect-square bg-muted overflow-hidden touch-pan-y"
+  onTouchStart={handleTouchStart}
+  onTouchEnd={handleTouchEnd}
+>
+  {item.image_url && (
+    <>
+      {/* Image 1 */}
+      <div
+        className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
+          activeImageIndex === 0
+            ? 'opacity-100'
+            : 'opacity-0'
+        }`}
+      >
+        <Image
+          src={item.image_url}
+          fittingType="fill"
+          className="w-full h-full"
+        />
+      </div>
+
+      {/* Image 2 */}
+      {item.image_url_2 && (
+        <div
+          className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
+            activeImageIndex === 1
+              ? 'opacity-100'
+              : 'opacity-0'
+          }`}
+        >
+          <Image
+            src={item.image_url_2}
+            fittingType="fill"
+            className="w-full h-full"
+          />
         </div>
+      )}
+
+      {/* Image indicators */}
+      {item.image_url_2 && (
+        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
+          <button
+            onClick={() => setActiveImageIndex(0)}
+            aria-label="Show first image"
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              activeImageIndex === 0
+                ? 'w-5 bg-white'
+                : 'w-1.5 bg-white/60'
+            }`}
+          />
+
+          <button
+            onClick={() => setActiveImageIndex(1)}
+            aria-label="Show second image"
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              activeImageIndex === 1
+                ? 'w-5 bg-white'
+                : 'w-1.5 bg-white/60'
+            }`}
+          />
+        </div>
+      )}
+    </>
+  )}
+
+  <button
+    onClick={onClose}
+    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow z-10"
+  >
+    <X className="w-4 h-4" />
+  </button>
+</div>
         <div className="p-5">
           <h2 className="font-display leading-[1.25] text-[#22211f] text-2xl normal-case flex items-center gap-1.5 flex-wrap">{t(item.name, item.name_th)}
             {itemTags.map((tg) => tg.icon_url && (

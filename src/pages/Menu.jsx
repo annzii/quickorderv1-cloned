@@ -26,6 +26,9 @@ export default function Menu() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [categoryRecords, setCategoryRecords] = useState([]);
   const [menuTags, setMenuTags] = useState([]);
+  const [banners, setBanners] = useState([]);
+  const [popupBanner, setPopupBanner] = useState(null);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
   const { addItem } = useCart();
   const { lang, setLang, t } = useLanguage();
@@ -39,13 +42,15 @@ export default function Menu() {
         { data: settingsList, error: settingsError },
         { data: groups, error: groupsError },
         { data: cats, error: catsError },
-        { data: tags, error: tagsError }
+        { data: tags, error: tagsError },
+        { data: bannerData, error: bannersError }
       ] = await Promise.all([
         supabase.from('menu_items').select('*'),
         supabase.from('store_settings').select('*'),
         supabase.from('addon_groups').select('*'),
         supabase.from('categories').select('*'),
-        supabase.from('menu_tags').select('*')
+        supabase.from('menu_tags').select('*'),
+        supabase.from('banners').select('*')
       ]);
 
       const error =
@@ -54,6 +59,7 @@ export default function Menu() {
         groupsError ||
         catsError ||
         tagsError;
+        bannersError;
 
       if (error) {
         console.error('Supabase menu load error:', error);
@@ -84,6 +90,27 @@ export default function Menu() {
             (b.display_order ?? b.order ?? 999)
         )
       );
+const today = new Date().toISOString().slice(0, 10);
+
+const activeBanners = (bannerData || []).filter((banner) => {
+  return (
+    banner.enabled &&
+    (!banner.start_date || banner.start_date <= today) &&
+    (!banner.end_date || banner.end_date >= today)
+  );
+});
+
+setBanners(
+  activeBanners.filter((banner) => banner.display_homepage)
+);
+
+const popupCandidate = activeBanners.find(
+  (banner) => banner.display_popup
+);
+
+if (popupCandidate) {
+  setPopupBanner(popupCandidate);
+}
 
     } catch (error) {
       console.error('Unexpected menu loading error:', error);
@@ -231,8 +258,63 @@ export default function Menu() {
     return t(c, sample?.category_th);
   };
 
-  return (
-    <div className="min-h-screen bg-background pb-20">
+ return (
+  <div className="min-h-screen bg-background pb-20">
+    {popupBanner && (
+      <div
+  className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-5"
+  onClick={() => setPopupBanner(null)}
+>
+        <div
+  className="relative w-full max-w-md overflow-hidden rounded-2xl bg-background shadow-2xl"
+  onClick={(e) => e.stopPropagation()}
+>
+          
+          <button
+            onClick={() => setPopupBanner(null)}
+            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white text-lg"
+            aria-label="Close"
+          >
+            ×
+          </button>
+
+          {popupBanner.action_type === 'url' &&
+          popupBanner.action_value ? (
+            <a
+              href={popupBanner.action_value}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setPopupBanner(null)}
+              className="block"
+            >
+              <img
+                src={popupBanner.image_url}
+                alt={
+                  t(
+                    popupBanner.title,
+                    popupBanner.title_th
+                  ) || 'Promotion'
+                }
+                className="block w-full h-auto"
+              />
+            </a>
+          ) : (
+            <img
+              src={popupBanner.image_url}
+              alt={
+                t(
+                  popupBanner.title,
+                  popupBanner.title_th
+                ) || 'Promotion'
+              }
+              className="block w-full h-auto"
+            />
+          )}
+        </div>
+      </div>
+    )}
+
+    {/* HEADER */}
 
       {/* HEADER */}
       <header className="bg-background border-b border-border relative">
@@ -457,7 +539,76 @@ export default function Menu() {
           </h1>
 
         </div>
-      </header>
+           </header>
+
+      {/* HOMEPAGE BANNER */}
+{banners.length > 0 && (
+  <div className="max-w-md mx-auto px-5 pt-4">
+    <div className="relative overflow-hidden rounded-2xl">
+      {banners.map((banner, index) => {
+        const bannerContent = (
+          <img
+            src={banner.image_url}
+            alt={
+              t(
+                banner.title,
+                banner.title_th
+              ) || 'Banner'
+            }
+            className="block w-full h-auto"
+          />
+        );
+
+        const content =
+          banner.action_type === 'url' &&
+          banner.action_value ? (
+            <a
+              href={banner.action_value}
+              target="_blank"
+              rel="noreferrer"
+              className="block"
+            >
+              {bannerContent}
+            </a>
+          ) : (
+            bannerContent
+          );
+
+        return (
+          <div
+            key={banner.id}
+            className={`transition-opacity duration-500 ease-in-out ${
+              index === activeBannerIndex
+                ? 'opacity-100'
+                : 'opacity-0 absolute inset-0'
+            }`}
+          >
+            {content}
+          </div>
+        );
+      })}
+    </div>
+
+    {banners.length > 1 && (
+      <div className="flex justify-center gap-1.5 mt-2.5">
+        {banners.map((banner, index) => (
+          <button
+            key={banner.id}
+            onClick={() =>
+              setActiveBannerIndex(index)
+            }
+            aria-label={`Go to banner ${index + 1}`}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              activeBannerIndex === index
+                ? 'w-5 bg-primary'
+                : 'w-1.5 bg-stone-300'
+            }`}
+          />
+        ))}
+      </div>
+    )}
+  </div>
+)}
 
       {/* MAIN */}
       <main className="max-w-md mx-auto px-5 pb-5">

@@ -22,6 +22,7 @@ import {
   Upload,
   GripVertical,
   Download,
+  ImageIcon,
 } from 'lucide-react';
 import {
   DragDropContext,
@@ -52,6 +53,7 @@ const STOCK_BADGES = {
 const SECTIONS = [
   { key: 'items', label: 'Menu Items', icon: UtensilsCrossed },
   { key: 'addons', label: 'Add-on Groups', icon: Layers },
+  { key: 'banners', label: 'Banners', icon: ImageIcon },
   { key: 'menu_tags', label: 'Menu Tags', icon: Tags },
   { key: 'categories', label: 'Categories', icon: Tag },
   { key: 'typography', label: 'Typography', icon: Type },
@@ -67,6 +69,7 @@ const emptyItem = {
   description_th: '',
   price: '',
   image_url: '',
+  image_url_2: '',
   category: '',
   category_th: '',
   stock_status: 'available',
@@ -96,9 +99,24 @@ export default function Admin() {
   const [groupDraft, setGroupDraft] = useState(emptyGroup);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [menuTags, setMenuTags] = useState([]);
-  const [itemOrder, setItemOrder] = useState([]);
+const [categories, setCategories] = useState([]);
+const [menuTags, setMenuTags] = useState([]);
+const [banners, setBanners] = useState([]);
+const [bannerEditing, setBannerEditing] = useState(null);
+const [bannerDraft, setBannerDraft] = useState({
+  title: '',
+  title_th: '',
+  image_url: '',
+  mobile_image_url: '',
+  action_type: 'none',
+  action_value: '',
+  start_date: '',
+  end_date: '',
+  enabled: true,
+  display_homepage: true,
+  display_popup: false,
+});
+const [itemOrder, setItemOrder] = useState([]);
   const [savingOrder, setSavingOrder] = useState(false);
   const [groupOrder, setGroupOrder] = useState([]);
   const [savingGroupOrder, setSavingGroupOrder] = useState(false);
@@ -109,26 +127,29 @@ export default function Admin() {
     setLoading(true);
 
     try {
-      const [
-        { data: menu, error: menuError },
-        { data: s, error: settingsError },
-        { data: ag, error: groupsError },
-        { data: cats, error: categoriesError },
-        { data: tags, error: tagsError },
-      ] = await Promise.all([
-        supabase.from('menu_items').select('*'),
-        supabase.from('store_settings').select('*'),
-        supabase.from('addon_groups').select('*'),
-        supabase.from('categories').select('*'),
-        supabase.from('menu_tags').select('*'),
-      ]);
+const [
+  { data: menu, error: menuError },
+  { data: s, error: settingsError },
+  { data: ag, error: groupsError },
+  { data: cats, error: categoriesError },
+  { data: tags, error: tagsError },
+  { data: banners, error: bannersError },
+] = await Promise.all([
+  supabase.from('menu_items').select('*'),
+  supabase.from('store_settings').select('*'),
+  supabase.from('addon_groups').select('*'),
+  supabase.from('categories').select('*'),
+  supabase.from('menu_tags').select('*'),
+  supabase.from('banners').select('*'),
+]);
 
-      const firstError =
-        menuError ||
-        settingsError ||
-        groupsError ||
-        categoriesError ||
-        tagsError;
+const firstError =
+  menuError ||
+  settingsError ||
+  groupsError ||
+  categoriesError ||
+  tagsError ||
+  bannersError;
 
       if (firstError) {
         throw firstError;
@@ -146,6 +167,11 @@ export default function Admin() {
       setMenuTags(
         (tags || []).sort(
           (a, b) => (a.order ?? 999) - (b.order ?? 999)
+        )
+      );
+	setBanners(
+        (banners || []).sort(
+          (a, b) => (a.created_at || '').localeCompare(b.created_at || '')
         )
       );
 
@@ -365,10 +391,12 @@ export default function Admin() {
       price: String(
         item.price ?? ''
       ),
-      image_url:
-        item.image_url || '',
-      category:
-        item.category || '',
+image_url:
+  item.image_url || '',
+image_url_2:
+  item.image_url_2 || '',
+category:
+  item.category || '',
       category_th:
         item.category_th || '',
       stock_status:
@@ -394,8 +422,9 @@ export default function Admin() {
         draft.description_th,
       price:
         Number(draft.price) || 0,
-      image_url: draft.image_url,
-      category: draft.category,
+image_url: draft.image_url,
+image_url_2: draft.image_url_2,
+category: draft.category,
       category_th:
         draft.category_th,
       stock_status:
@@ -675,7 +704,45 @@ export default function Admin() {
   /*
    * Add-on groups
    */
+const uploadBannerImage = async (file) => {
+  if (!file) return;
 
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}.${fileExt}`;
+
+    const filePath = fileName;
+
+    const { error: uploadError } = await supabase.storage
+      .from('banners')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('Failed to upload banner image:', uploadError);
+      alert(uploadError.message);
+      return;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage
+      .from('banners')
+      .getPublicUrl(filePath);
+
+    setBannerDraft((prev) => ({
+      ...prev,
+      image_url: publicUrl,
+    }));
+  } catch (error) {
+    console.error('Failed to upload banner image:', error);
+    alert(error.message);
+  }
+};
   const openGroupNew = () => {
     setGroupDraft({
       ...emptyGroup,
@@ -1208,7 +1275,7 @@ const payload = {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-20">
+    <div className="min-h-screen bg-stone-50 pb-40">
       <header className="bg-white border-b border-stone-100 sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-stone-900">
@@ -1759,9 +1826,457 @@ const payload = {
                     ? 'Saving…'
                     : 'Save Group Order'}
                 </button>
-              </>
+                            </>
+
             ) : tab ===
+              'banners' ? (
+
+              <div className="space-y-4">
+
+                {!bannerEditing && (
+                  <>
+                    <div className="flex items-center justify-between">
+
+                      <div>
+
+                        <h2 className="font-display text-2xl text-stone-900">
+                          Banners
+                        </h2>
+
+                        <p className="text-xs text-stone-400 mt-1">
+                          Manage promotional banners shown on the customer site.
+                        </p>
+
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setBannerDraft({
+                            title: '',
+                            title_th: '',
+                            image_url: '',
+                            mobile_image_url: '',
+                            action_type: 'none',
+                            action_value: '',
+                            start_date: '',
+                            end_date: '',
+                            enabled: true,
+                            display_homepage: true,
+                            display_popup: false,
+                          });
+                          setBannerEditing('new');
+                        }}
+                        className="shrink-0 flex items-center gap-2 bg-stone-900 text-white font-semibold px-4 py-2.5 rounded-xl text-sm"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Banner
+                      </button>
+
+                    </div>
+
+                    {loading ? (
+
+                      <div className="flex justify-center py-20">
+                        <div className="w-7 h-7 border-4 border-stone-200 border-t-amber-600 rounded-full animate-spin" />
+                      </div>
+
+                    ) : banners.length === 0 ? (
+
+                      <div className="bg-white rounded-2xl border border-stone-100 p-8 text-center">
+
+                        <p className="text-sm text-stone-400">
+                          No banners yet.
+                        </p>
+
+                      </div>
+
+                    ) : (
+
+                      <div className="space-y-3">
+
+                        {banners.map((banner) => (
+
+                          <div
+                            key={banner.id}
+                            className="bg-white rounded-2xl border border-stone-100 overflow-hidden"
+                          >
+
+                            {banner.image_url && (
+                              <img
+                                src={banner.image_url}
+                                alt={banner.title || 'Banner'}
+                                className="w-full aspect-[16/7] object-cover"
+                              />
+                            )}
+
+                            <div className="p-4">
+
+                              <div className="flex items-center justify-between gap-3">
+
+                                <div className="min-w-0">
+
+                                  <h3 className="font-semibold text-sm text-stone-900 truncate">
+                                    {banner.title || 'Untitled banner'}
+                                  </h3>
+
+                                  <p className="text-xs text-stone-400 mt-1">
+                                    {banner.start_date || 'No start date'}
+                                    {' → '}
+                                    {banner.end_date || 'No end date'}
+                                  </p>
+
+                                </div>
+
+                                <div className="flex items-center gap-1">
+
+                                  <span
+                                    className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium ${
+                                      banner.enabled
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-stone-100 text-stone-500'
+                                    }`}
+                                  >
+                                    {banner.enabled ? 'Active' : 'Inactive'}
+                                  </span>
+
+                                  <button
+                                    onClick={() => {
+                                      setBannerDraft({
+                                        title: banner.title || '',
+                                        title_th: banner.title_th || '',
+                                        image_url: banner.image_url || '',
+                                        mobile_image_url: banner.mobile_image_url || '',
+                                        action_type: banner.action_type || 'none',
+                                        action_value: banner.action_value || '',
+                                        start_date: banner.start_date || '',
+                                        end_date: banner.end_date || '',
+                                        enabled: banner.enabled ?? true,
+                                        display_homepage: banner.display_homepage ?? true,
+                                        display_popup: banner.display_popup ?? false,
+                                      });
+                                      setBannerEditing(banner.id);
+                                    }}
+                                    className="p-2 text-stone-400 hover:text-stone-900"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm('Delete this banner?')) return;
+
+                                      const { error } = await supabase
+                                        .from('banners')
+                                        .delete()
+                                        .eq('id', banner.id);
+
+                                      if (error) {
+                                        alert(error.message);
+                                        return;
+                                      }
+
+                                      load();
+                                    }}
+                                    className="p-2 text-stone-400 hover:text-red-500"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+
+                                </div>
+
+                              </div>
+
+                            </div>
+
+                          </div>
+
+                        ))}
+
+                      </div>
+
+                    )}
+
+                  </>
+                )}
+
+                {bannerEditing && (
+
+                  <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
+
+                    <div className="flex items-center justify-between p-4 border-b border-stone-100">
+
+                      <div className="font-semibold text-stone-900">
+                        {bannerEditing === 'new' ? 'Add Banner' : 'Edit Banner'}
+                      </div>
+
+                      <button
+                        onClick={() => setBannerEditing(null)}
+                        className="p-1"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+
+                    </div>
+
+                    <div className="p-4 space-y-4">
+
+                      <div>
+
+                        <label className="block text-xs font-medium text-stone-500 mb-1.5">
+                          Banner Image
+                        </label>
+
+                        {bannerDraft.image_url && (
+
+                          <img
+                            src={bannerDraft.image_url}
+                            alt="Banner preview"
+                            className="w-full aspect-[16/7] object-cover rounded-xl mb-2"
+                          />
+
+                        )}
+
+                        <label className="flex items-center justify-center gap-2 border border-dashed border-stone-300 rounded-xl py-6 cursor-pointer hover:bg-stone-50">
+
+                          <Upload className="w-4 h-4 text-stone-500" />
+
+                          <span className="text-sm text-stone-600">
+                            {bannerDraft.image_url ? 'Replace image' : 'Upload image'}
+                          </span>
+
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) =>
+                              uploadBannerImage(e.target.files?.[0])
+                            }
+                          />
+
+                        </label>
+
+                      </div>
+
+                      <input
+                        placeholder="Title (EN)"
+                        value={bannerDraft.title}
+                        onChange={(e) =>
+                          setBannerDraft({
+                            ...bannerDraft,
+                            title: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
+                      />
+
+                      <input
+                        placeholder="Title (TH)"
+                        value={bannerDraft.title_th}
+                        onChange={(e) =>
+                          setBannerDraft({
+                            ...bannerDraft,
+                            title_th: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
+                      />
+
+                      <div className="grid grid-cols-2 gap-3">
+
+                        <div>
+
+                          <label className="block text-xs font-medium text-stone-500 mb-1.5">
+                            Start date
+                          </label>
+
+                          <input
+                            type="date"
+                            value={bannerDraft.start_date}
+                            onChange={(e) =>
+                              setBannerDraft({
+                                ...bannerDraft,
+                                start_date: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
+                          />
+
+                        </div>
+
+                        <div>
+
+                          <label className="block text-xs font-medium text-stone-500 mb-1.5">
+                            End date
+                          </label>
+
+                          <input
+                            type="date"
+                            value={bannerDraft.end_date}
+                            onChange={(e) =>
+                              setBannerDraft({
+                                ...bannerDraft,
+                                end_date: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
+                          />
+
+                        </div>
+
+                      </div>
+
+                      <label className="flex items-center justify-between py-2">
+
+                        <div>
+
+                          <div className="text-sm font-medium text-stone-800">
+                            Active
+                          </div>
+
+                          <div className="text-xs text-stone-400">
+                            Show this banner when active.
+                          </div>
+
+                        </div>
+
+                        <input
+                          type="checkbox"
+                          checked={bannerDraft.enabled}
+                          onChange={(e) =>
+                            setBannerDraft({
+                              ...bannerDraft,
+                              enabled: e.target.checked,
+                            })
+                          }
+                          className="w-4 h-4"
+                        />
+
+                      </label>
+
+                      <label className="flex items-center justify-between py-2">
+
+                        <div>
+
+                          <div className="text-sm font-medium text-stone-800">
+                            Show on homepage
+                          </div>
+
+                          <div className="text-xs text-stone-400">
+                            Display this banner on the customer homepage.
+                          </div>
+
+                        </div>
+
+                        <input
+                          type="checkbox"
+                          checked={bannerDraft.display_homepage}
+                          onChange={(e) =>
+                            setBannerDraft({
+                              ...bannerDraft,
+                              display_homepage: e.target.checked,
+                            })
+                          }
+                          className="w-4 h-4"
+                        />
+
+                      </label>
+
+                      <label className="flex items-center justify-between py-2">
+
+                        <div>
+
+                          <div className="text-sm font-medium text-stone-800">
+                            Show as popup
+                          </div>
+
+                          <div className="text-xs text-stone-400">
+                            Use this banner for the opening popup later.
+                          </div>
+
+                        </div>
+
+                        <input
+                          type="checkbox"
+                          checked={bannerDraft.display_popup}
+                          onChange={(e) =>
+                            setBannerDraft({
+                              ...bannerDraft,
+                              display_popup: e.target.checked,
+                            })
+                          }
+                          className="w-4 h-4"
+                        />
+
+                      </label>
+
+                      <div className="flex gap-2 pt-2">
+
+                        <button
+                          onClick={() => setBannerEditing(null)}
+                          className="flex-1 bg-stone-100 text-stone-700 font-semibold py-3 rounded-xl"
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          onClick={async () => {
+
+                            if (!bannerDraft.image_url) {
+                              alert('Please upload a banner image.');
+                              return;
+                            }
+
+                            const payload = {
+                              ...bannerDraft,
+                              id:
+                                bannerEditing === 'new'
+                                  ? crypto.randomUUID()
+                                  : bannerEditing,
+                              updated_at: new Date().toISOString(),
+                            };
+
+                            const { error } =
+                              bannerEditing === 'new'
+                                ? await supabase
+                                    .from('banners')
+                                    .insert([payload])
+                                : await supabase
+                                    .from('banners')
+                                    .update(payload)
+                                    .eq('id', bannerEditing);
+
+                            if (error) {
+                              alert(error.message);
+                              return;
+                            }
+
+                            setBannerEditing(null);
+                            load();
+
+                          }}
+                          className="flex-1 bg-stone-900 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2"
+                        >
+
+                          <Save className="w-4 h-4" />
+
+                          Save Banner
+
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                )}
+
+              </div>
+
+            ) : tab ===
+
               'menu_tags' ? (
+
               <MenuTagManager
                 onSaved={load}
               />
@@ -1965,6 +2480,20 @@ const payload = {
                 }
                 className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
               />
+<input
+  placeholder="Second Image URL — optional"
+  value={
+    draft.image_url_2 || ''
+  }
+  onChange={(e) =>
+    setDraft({
+      ...draft,
+      image_url_2:
+        e.target.value,
+    })
+  }
+  className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-amber-500"
+/>
 
               <div>
                 <h3 className="text-sm font-semibold text-stone-700 mb-2">
