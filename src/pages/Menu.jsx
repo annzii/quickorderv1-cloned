@@ -29,6 +29,43 @@ export default function Menu() {
   const [banners, setBanners] = useState([]);
   const [popupBanner, setPopupBanner] = useState(null);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [bannerTouchStartX, setBannerTouchStartX] = useState(null);
+
+  const handleBannerTouchStart = (e) => {
+  setBannerTouchStartX(e.touches[0].clientX);
+};
+
+const handleBannerTouchEnd = (e) => {
+  if (
+    bannerTouchStartX === null ||
+    banners.length <= 1
+  ) {
+    setBannerTouchStartX(null);
+    return;
+  }
+
+  const bannerTouchEndX = e.changedTouches[0].clientX;
+  const distance = bannerTouchStartX - bannerTouchEndX;
+
+  if (Math.abs(distance) < 50) {
+    setBannerTouchStartX(null);
+    return;
+  }
+
+  if (distance > 0) {
+    // Swipe left → next banner
+    setActiveBannerIndex((prev) =>
+      prev === banners.length - 1 ? 0 : prev + 1
+    );
+  } else {
+    // Swipe right → previous banner
+    setActiveBannerIndex((prev) =>
+      prev === 0 ? banners.length - 1 : prev - 1
+    );
+  }
+
+  setBannerTouchStartX(null);
+};
 
   const { addItem } = useCart();
   const { lang, setLang, t } = useLanguage();
@@ -544,7 +581,11 @@ if (popupCandidate) {
       {/* HOMEPAGE BANNER */}
 {banners.length > 0 && (
   <div className="max-w-md mx-auto px-5 pt-4">
-    <div className="relative overflow-hidden rounded-2xl">
+    <div
+  className="relative overflow-hidden rounded-2xl touch-pan-y"
+  onTouchStart={handleBannerTouchStart}
+  onTouchEnd={handleBannerTouchEnd}
+>
       {banners.map((banner, index) => {
         const bannerContent = (
           <img
